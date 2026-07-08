@@ -11,6 +11,8 @@ on two papers:
 - **Joad et al. (2026)** — "There Is More to Refusal in Large Language Models 
   than a Single Direction" ([arXiv](https://arxiv.org/abs/2602.02132))
 
+📝 [Read the full writeup](https://docs.google.com/document/d/e/2PACX-1vSsOfKstJxfCdDpQb1pqelMmwiMaK7a-cE6ihg8xWju-qIWyTZp006iP6INtCzqf1IK6XGziC12NSWM/pub)
+
 ## Research Question
 
 Arditi et al. showed that refusal behavior in LLMs is mediated by a single 
