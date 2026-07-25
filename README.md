@@ -1,106 +1,30 @@
-# The Geometry of Refusal in LLMs
+# LLM Refusal Research
 
-**Amith Chintalapati, Johny Eskandar, Viraaj Singh, Cole Heutten**
+Investigating how refusal behavior is represented internally in small language models, using activation steering on Qwen-1.8B-Chat.
 
-This repository contains the code for our final project investigating the 
-geometric structure of refusal behavior in large language models. We build 
-on two papers:
+## Overview
 
-- **Arditi et al. (2024)** — "Refusal in Language Models Is Mediated by a 
-  Single Direction" ([arXiv](https://arxiv.org/abs/2406.11717))
-- **Joad et al. (2026)** — "There Is More to Refusal in Large Language Models 
-  than a Single Direction" ([arXiv](https://arxiv.org/abs/2602.02132))
+Most work on LLM refusal treats it as a single linear direction in activation space. We tested whether that holds up across different categories of harmful content, using prompts from SORRY-Bench across four categories: HateSpeech, CrimeAssistance, Inappropriate, and Advice.
 
-📝 [Read the full writeup](https://docs.google.com/document/d/e/2PACX-1vSsOfKstJxfCdDpQb1pqelMmwiMaK7a-cE6ihg8xWju-qIWyTZp006iP6INtCzqf1IK6XGziC12NSWM/pub)
+## Method
 
-## Research Question
+We extracted refusal directions at each layer by contrasting activations on harmful vs. benign prompts, then used ablation to test how removing each direction affected the model's refusal behavior. Layer 14 came out as the strongest refusal layer, with a much sharper score drop than any other layer in the network.
 
-Arditi et al. showed that refusal behavior in LLMs is mediated by a single 
-direction in activation space. But does this hold across *different types* of 
-harmful content? We test whether refusal directions for different harm 
-categories (hate speech, crime assistance, inappropriate topics, unqualified 
-advice) are geometrically identical or distinct — i.e., is refusal a line or 
-a cone?
+## Key findings
 
-## Model
+- **Layer 14 is the strongest refusal layer** — score dropped from roughly 1.6 to -6.4 when the direction was ablated, far more than any other layer
+- **Cross-category ablation achieved 84-96% bypass rates**, meaning a refusal direction extracted from one harm category often suppressed refusal in others too
+- **CrimeAssistance transferred most strongly** across categories, while HateSpeech was the most distinct
+- **Cosine similarities between category directions ranged from 0.735 to 0.892** — high, but not high enough to call these the same direction. This points toward refusal living in a conic subspace rather than a single line, which lines up with related findings in Joad et al. (2026)
 
-All experiments use **Qwen-1.8B-Chat**, a small instruction-tuned model that 
-fits on a free Colab T4 GPU.
+## Why this matters
 
-## Notebooks
+If refusal is a subspace rather than a single direction, safety interventions that assume a single steering vector may be incomplete. This has implications for how robust current refusal-based safety training actually is.
 
-### `01_refusal_direction_replication.ipynb`
-Replicates the core finding of Arditi et al. on Qwen-1.8B-Chat:
-1. Computes the mean-difference refusal direction across all layers
-2. Selects the best layer by measuring refusal score drop under ablation
-3. Demonstrates that ablating the direction bypasses refusal on harmful prompts
-4. Demonstrates that adding the direction induces refusal on harmless prompts
+## Team
 
-**Run on Colab:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://drive.google.com/file/d/11r96tlft9SIIvH-cZqWmgwxPKJCk-de2/view?usp=sharing)
+Built with Amith Chintalapati, Viraaj Singh, and Cole Heutten. Original repo [here](https://github.com/amithchintalapati/LLM-Refusal-Research).
 
-### `02_geometry_of_refusal.ipynb`
-Extends the replication to test the geometric structure of refusal:
-1. Loads SorryBench and splits prompts into 4 harm categories
-2. Filters to only prompts the model actually refuses at baseline
-3. Computes a separate refusal direction per category using mean-difference
-4. Measures pairwise cosine similarity between all category directions
-5. Runs cross-category ablation transfer to test whether directions generalize
+## Status
 
-**Run on Colab:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://drive.google.com/file/d/1P6GHkMKBGdTtpz600ZXnd5oejRdI9_Lu/view?usp=sharing)
-
-## Data
-
-- **Harmful prompts:** [SorryBench](https://huggingface.co/datasets/sorry-bench/sorry-bench-202406) 
-  (Xie et al., 2025) — 440 unsafe instructions across 44 categories. 
-  Requires accepting terms on HuggingFace. Set up a HuggingFace token and 
-  add it to Colab secrets as `HF_TOKEN`.
-- **Harmless prompts:** 32 benign instructions hardcoded in each notebook, 
-  equivalent to the WildGuardMix benign pool used in Joad et al.
-
-## Figures
-
-All figures are in the `blog_figures/` folder.
-
-| Figure | Description | Generated by |
-|--------|-------------|--------------|
-| `layer_selection.png` | Refusal score drop when ablating each layer's direction. Red bar = selected layer (14). | `01_refusal_direction_replication.ipynb` — cell 13 |
-| `cosine_similarity.png` | Pairwise cosine similarity between per-category refusal directions. | `02_geometry_of_refusal.ipynb` — cell 15 |
-| `bypass_rate.png` | Cross-category ablation transfer — bypass rate when ablating domain A's direction on domain B's prompts. | `02_geometry_of_refusal.ipynb` — cell 18 |
-| `baseline_refusal_rates.png` | Baseline refusal rate per SorryBench policy domain before any intervention. Shows Inappropriate and Advice are refused less often than HateSpeech and CrimeAssistance. | `02_geometry_of_refusal.ipynb` — "Baseline Refusal Rate" section |
-| `addition_coefficients.png` | Smallest steering coefficient needed to induce refusal on each harmless prompt by adding the global refusal direction. | `02_geometry_of_refusal.ipynb` — "Addition Induces Refusal" section |
-
-## How to Run
-
-1. Open either notebook in Google Colab (links above)
-2. Go to Runtime → Change runtime type → T4 GPU
-3. For `02_geometry_of_refusal.ipynb`:
-   - Accept SorryBench terms at https://huggingface.co/datasets/sorry-bench/sorry-bench-202406
-   - Create a HuggingFace token at https://huggingface.co/settings/tokens
-   - Add it to Colab secrets as `HF_TOKEN`
-4. Run all cells in order
-
-Each notebook takes approximately 10 minutes to run on a T4 GPU.
-
-## Requirements
-
-Install dependencies with:
-
-```bash
-pip install -r requirements.txt
-```
-
-Or manually install the core packages:
-
-```bash
-pip install transformers==4.44.2 tiktoken==0.7.0 accelerate einops transformers_stream_generator datasets torch pandas seaborn matplotlib tqdm
-```
-
-Note: these notebooks are designed to run on Google Colab with a GPU. 
-Running locally requires a CUDA-capable GPU or Apple Silicon Mac with 
-at least 8GB of memory.
-
-## References
-
-- Arditi et al. (2024). Refusal in Language Models Is Mediated by a Single Direction. NeurIPS 2024. https://arxiv.org/abs/2406.11717
-- Joad et al. (2026). There Is More to Refusal in Large Language Models than a Single Direction. https://arxiv.org/abs/2602.02132
-- Xie et al. (2025). Sorry-Bench: Systematically Evaluating Large Language Model Safety Refusal. ICLR 2025.
+Unpublished, exploratory research. Open to feedback.
